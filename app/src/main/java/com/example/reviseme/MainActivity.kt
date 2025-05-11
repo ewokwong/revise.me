@@ -36,9 +36,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.graphics.Color
 import java.util.Date
 import kotlin.math.floor
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import androidx.compose.foundation.BorderStroke
+
 
 class MainActivity : ComponentActivity() {
     // Initialise the database
@@ -220,20 +227,12 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
             if (topic.nextStudyDay == null) {
                 Button(
                     onClick = {
-                        // On button click
-                        // Add today to Topic Study History
                         val currentDate = Date()
                         val updatedStudiedOn = topic.studiedOn.toMutableList().apply { add(currentDate) }
-
-                        // Increment interval by 1.5x
-                        // If interval is 0 (i.e., topic hasn't been revised yet), set it to 1
                         val updatedInterval = if (topic.interval == 0.0f) 1.0f else topic.interval * 1.5f
                         val roundedInterval = floor(updatedInterval.toDouble()).toInt()
+                        val updatedNextStudyDay = Date(currentDate.time + (roundedInterval * 24 * 60 * 60 * 1000).toLong())
 
-                        // Set NextStudyDay
-                        val updatedNextStudyDay = Date(currentDate.time + (roundedInterval * 24 * 60 * 60 * 1000).toLong()) // Add interval days
-
-                        // Update Topic
                         val updatedTopic = topic.copy(
                             id = topic.id,
                             name = topic.name,
@@ -244,13 +243,47 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                         )
                         topicViewModel.iterateTopic(updatedTopic)
                         showStudyDialog = true
-
                     },
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF228B22) // Forest Green
                     )
                 ) {
                     Text("Study Now")
+                }
+            } else {
+                // Display the next study date
+                OutlinedButton(
+                    onClick = { /* No action needed */ },
+                    enabled = false,
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color(0xFFE0E0E0), // Light Gray
+                        disabledContainerColor = Color(0xFFF5F5F5) // Slightly lighter gray
+                    ),
+                    border = BorderStroke(1.dp, Color.Gray), // Use BorderStroke here
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    val daysUntil = topic.nextStudyDay.let { nextStudyDay ->
+                        val currentDate = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 0)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.time
+
+                        val normalizedNextStudyDay = Calendar.getInstance().apply {
+                            time = nextStudyDay
+                            set(Calendar.HOUR_OF_DAY, 0)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.time
+
+                        val diffInMillis = normalizedNextStudyDay.time - currentDate.time
+                        TimeUnit.MILLISECONDS.toDays(diffInMillis).toInt()
+                    } ?: 0
+
+                    val dayText = if (daysUntil == 1) "1 day" else "$daysUntil days"
+                    Text("To be studied in $dayText")
                 }
             }
         }
@@ -271,10 +304,47 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
 
     // Existing AlertDialog logic for edit and delete actions
     if (showDialog) {
+        val dateFormat = SimpleDateFormat("EEE, dd MMM, yyyy", Locale.getDefault())
+
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text(topic.name) },
-            text = { Text(topic.description) },
+            text = {
+                Column {
+                    Text(
+                        text = "Description",
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                    Text(topic.description)
+
+                    Text(
+                        text = "Interval",
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Text(if (topic.interval == 0.0f) "Not been set" else topic.interval.toString())
+
+                    Text(
+                        text = "Next Study Date",
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Text(topic.nextStudyDay?.let { dateFormat.format(it) } ?: "Not been set")
+
+                    Text(
+                        text = "Study History",
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    if (topic.studiedOn.isEmpty()) {
+                        Text("Not been set")
+                    } else {
+                        topic.studiedOn.forEach { date ->
+                            Text("• ${dateFormat.format(date)}")
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 Row {
                     TextButton(onClick = { showEditDialog = true; showDialog = false }) {
