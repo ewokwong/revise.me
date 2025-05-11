@@ -36,6 +36,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.graphics.Color
 
 class MainActivity : ComponentActivity() {
     // Initialise the database
@@ -177,11 +178,14 @@ fun HomeContent(modifier: Modifier = Modifier, topicViewModel: TopicViewModel) {
         }
     }
 }
+
+// Topic Card
 @Composable
 fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
     var showDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showStudyDialog by remember { mutableStateOf(false) }
     var editedName by remember { mutableStateOf(topic.name) }
     var editedDescription by remember { mutableStateOf(topic.description) }
 
@@ -192,24 +196,52 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
             .clickable { showDialog = true },
         elevation = androidx.compose.material3.CardDefaults.cardElevation(4.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = topic.name,
-                style = androidx.compose.material3.MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = topic.description,
-                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = topic.name,
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = topic.description,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+            if (topic.nextStudyDay == null) {
+                Button(
+                    onClick = { showStudyDialog = true },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF228B22) // Forest Green
+                    )
+                ) {
+                    Text("Study Now")
+                }
+            }
         }
     }
 
+    if (showStudyDialog) {
+        AlertDialog(
+            onDismissRequest = { showStudyDialog = false },
+            title = { Text("Congratulations!") },
+            text = { Text("Your next study day is on: ${topic.nextStudyDay ?: "TBD"}") },
+            confirmButton = {
+                TextButton(onClick = { showStudyDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    // Existing AlertDialog logic for edit and delete actions
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
