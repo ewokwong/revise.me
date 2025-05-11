@@ -3,6 +3,7 @@
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import java.util.Date
 
 @Dao
 interface TopicDao {
@@ -17,4 +18,23 @@ interface TopicDao {
 
     @Query("UPDATE topics SET name = :name, description = :description WHERE id = :id")
     suspend fun updateTopic(id: Int, name: String, description: String)
+
+    // Query to iterate topic after studied
+    @Query("""
+        UPDATE topics 
+        SET name = :name, 
+            description = :description, 
+            studiedOn = :studiedOn, 
+            interval = :interval, 
+            nextStudyDay = :nextStudyDay 
+        WHERE id = :id
+    """)
+    suspend fun iterateTopic(
+        id: Int,
+        name: String,
+        description: String,
+        studiedOn: List<Date>,
+        interval: Float,
+        nextStudyDay: Date?
+    )
 }

@@ -37,6 +37,21 @@ class TopicViewModel(private val database: AppDatabase) : ViewModel() {
         }
     }
 
+    // Function to iterate topic after studied
+    fun iterateTopic(topic: Topic) {
+        viewModelScope.launch {
+            database.topicDao().iterateTopic(
+                topic.id,
+                topic.name,
+                topic.description,
+                topic.studiedOn,
+                topic.interval,
+                topic.nextStudyDay
+            )
+            fetchTopics()
+        }
+    }
+
     private fun fetchTopics() {
         viewModelScope.launch {
             _topics.value = database.topicDao().getAllTopics()

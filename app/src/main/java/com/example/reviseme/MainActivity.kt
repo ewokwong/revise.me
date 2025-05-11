@@ -37,6 +37,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.graphics.Color
+import java.util.Date
+import kotlin.math.floor
 
 class MainActivity : ComponentActivity() {
     // Initialise the database
@@ -217,7 +219,33 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
             }
             if (topic.nextStudyDay == null) {
                 Button(
-                    onClick = { showStudyDialog = true },
+                    onClick = {
+                        // On button click
+                        // Add today to Topic Study History
+                        val currentDate = Date()
+                        val updatedStudiedOn = topic.studiedOn.toMutableList().apply { add(currentDate) }
+
+                        // Increment interval by 1.5x
+                        // If interval is 0 (i.e., topic hasn't been revised yet), set it to 1
+                        val updatedInterval = if (topic.interval == 0.0f) 1.0f else topic.interval * 1.5f
+                        val roundedInterval = floor(updatedInterval.toDouble()).toInt()
+
+                        // Set NextStudyDay
+                        val updatedNextStudyDay = Date(currentDate.time + (roundedInterval * 24 * 60 * 60 * 1000).toLong()) // Add interval days
+
+                        // Update Topic
+                        val updatedTopic = topic.copy(
+                            id = topic.id,
+                            name = topic.name,
+                            description = topic.description,
+                            studiedOn = updatedStudiedOn,
+                            interval = updatedInterval,
+                            nextStudyDay = updatedNextStudyDay
+                        )
+                        topicViewModel.iterateTopic(updatedTopic)
+                        showStudyDialog = true
+
+                    },
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF228B22) // Forest Green
                     )
