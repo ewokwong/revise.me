@@ -245,7 +245,7 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = {
-//                    topicViewModel.updateTopic(topic.copy(name = editedName, description = editedDescription))
+                    topicViewModel.updateTopic(topic.copy(name = editedName, description = editedDescription))
                     showEditDialog = false
                 }) {
                     Text("Save")

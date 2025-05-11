@@ -29,13 +29,13 @@ class TopicViewModel(private val database: AppDatabase) : ViewModel() {
         }
     }
 
-//    // Function to update topic
-//    fun updateTopic(topic: Topic) {
-//        viewModelScope.launch {
-//            database.topicDao().updateTopic(topic)
-//            fetchTopics()
-//        }
-//    }
+    // Function to update topic
+    fun updateTopic(topic: Topic) {
+        viewModelScope.launch {
+            database.topicDao().updateTopic(topic.id, topic.name, topic.description)
+            fetchTopics()
+        }
+    }
 
     private fun fetchTopics() {
         viewModelScope.launch {
