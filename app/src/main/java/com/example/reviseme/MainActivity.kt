@@ -37,7 +37,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 
-
 class MainActivity : ComponentActivity() {
     // Initialise the database
     private val database by lazy { DatabaseProvider.getDatabase(this) }
@@ -66,7 +65,8 @@ object DatabaseProvider {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "app_database"
-            ).build()
+            ).fallbackToDestructiveMigration()
+            .build()
         }
         return INSTANCE!!
     }
@@ -139,6 +139,9 @@ fun CustomTopBar(topicViewModel: TopicViewModel) {
                         showError = true
                     } else {
                         topicViewModel.addTopic(topicName, topicDescription)
+                        topicName = "" // Clear the topic name field
+                        topicDescription = "" // Clear the topic description field
+                        showError = false // Reset error state
                         showDialog = false
                     }
                 }) {
@@ -296,3 +299,4 @@ fun GreetingPreview() {
         Greeting("Android")
     }
 }
+
