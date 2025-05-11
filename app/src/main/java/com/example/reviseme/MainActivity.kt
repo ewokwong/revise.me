@@ -1,7 +1,8 @@
 package com.example.reviseme
 
 import AppDatabase
-import Topic
+import TopicViewModel
+import TopicViewModelFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,14 +30,25 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.OutlinedTextField
 import android.content.Context
 import androidx.room.Room
+import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+
 
 class MainActivity : ComponentActivity() {
+    // Initialise the database
+    private val database by lazy { DatabaseProvider.getDatabase(this) }
+    private val topicViewModel: TopicViewModel by viewModels {
+        TopicViewModelFactory(database)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             RevisemeTheme {
-                HomePage()
+                HomePage(topicViewModel)
             }
         }
     }
@@ -60,21 +72,23 @@ object DatabaseProvider {
 
 // Home Page
 @Composable
-fun HomePage() {
+fun HomePage(topicViewModel: TopicViewModel) {
     Scaffold(
-        topBar = { CustomTopBar() },
+        topBar = { CustomTopBar(topicViewModel = topicViewModel) },
         content = { innerPadding ->
-            HomeContent(modifier = Modifier.padding(innerPadding))
+            HomeContent(modifier = Modifier.padding(innerPadding), topicViewModel = topicViewModel)
         }
     )
 }
 
 // Top Bar for Home Page
 @Composable
-fun CustomTopBar() {
+fun CustomTopBar(topicViewModel: TopicViewModel) {
     var showDialog by remember { mutableStateOf(false) }
     var topicName by remember { mutableStateOf("") }
     var topicDescription by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+
 
     Row(
         modifier = Modifier
@@ -108,10 +122,24 @@ fun CustomTopBar() {
                         onValueChange = { topicDescription = it },
                         label = { Text("Topic Description") }
                     )
+                    if (showError) {
+                        Text(
+                            text = "Both fields are required.",
+                            color = androidx.compose.ui.graphics.Color.Red,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(onClick = {
+                    if (topicName.isBlank() || topicDescription.isBlank()) {
+                        showError = true
+                    } else {
+                        topicViewModel.addTopic(topicName, topicDescription)
+                        showDialog = false
+                    }
+                }) {
                     Text("Add")
                 }
             },
@@ -126,15 +154,24 @@ fun CustomTopBar() {
 
 // Main content for Home Page
 @Composable
-fun HomeContent(modifier: Modifier = Modifier) {
-    Text(
-        text = "Welcome to Revise.me! Add a topic to get started.",
-        modifier = modifier
-            .fillMaxSize()
-            .padding(top = 32.dp, start = 16.dp, end = 16.dp)
-    )
-}
+fun HomeContent(modifier: Modifier = Modifier, topicViewModel: TopicViewModel) {
+    val topics by topicViewModel.topics.collectAsState(initial = emptyList())
 
+    if (topics.isEmpty()) {
+        Text(
+            text = "No Topics Yet. Add a topic to get started.",
+            modifier = modifier
+                .fillMaxSize()
+                .padding(top = 32.dp, start = 16.dp, end = 16.dp)
+        )
+    } else {
+        LazyColumn(modifier = modifier.padding(16.dp)) {
+            items(topics) { topic ->
+                Text(text = "${topic.name}: ${topic.description}")
+            }
+        }
+    }
+}
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
