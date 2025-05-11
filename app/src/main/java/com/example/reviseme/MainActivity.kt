@@ -1,6 +1,7 @@
 package com.example.reviseme
 
 import AppDatabase
+import Topic
 import TopicViewModel
 import TopicViewModelFactory
 import android.os.Bundle
@@ -31,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import android.content.Context
 import androidx.room.Room
 import androidx.activity.viewModels
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -102,7 +104,7 @@ fun CustomTopBar(topicViewModel: TopicViewModel) {
             style = androidx.compose.material3.MaterialTheme.typography.titleLarge
         )
         Button(onClick = { showDialog = true }) {
-            Text("+ Topic")
+            Text("+ Add New Topic")
         }
     }
 
@@ -167,11 +169,118 @@ fun HomeContent(modifier: Modifier = Modifier, topicViewModel: TopicViewModel) {
     } else {
         LazyColumn(modifier = modifier.padding(16.dp)) {
             items(topics) { topic ->
-                Text(text = "${topic.name}: ${topic.description}")
+                TopicCard(topic = topic, topicViewModel = topicViewModel)
             }
         }
     }
 }
+@Composable
+fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
+    var showDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var editedName by remember { mutableStateOf(topic.name) }
+    var editedDescription by remember { mutableStateOf(topic.description) }
+
+    androidx.compose.material3.Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable { showDialog = true },
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+        ) {
+            Text(
+                text = topic.name,
+                style = androidx.compose.material3.MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = topic.description,
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(topic.name) },
+            text = { Text(topic.description) },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = { showEditDialog = true; showDialog = false }) {
+                        Text("Edit")
+                    }
+                    TextButton(onClick = { showDeleteConfirmation = true; showDialog = false }) {
+                        Text("Delete")
+                    }
+                }
+            },
+        )
+    }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit Topic") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editedName,
+                        onValueChange = { editedName = it },
+                        label = { Text("Topic Name") }
+                    )
+                    OutlinedTextField(
+                        value = editedDescription,
+                        onValueChange = { editedDescription = it },
+                        label = { Text("Topic Description") }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+//                    topicViewModel.updateTopic(topic.copy(name = editedName, description = editedDescription))
+                    showEditDialog = false
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Confirm Deletion") },
+            text = { Text("Are you sure you want to delete this topic?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    topicViewModel.deleteTopic(topic)
+                    showDeleteConfirmation = false
+                }) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(

@@ -11,4 +11,10 @@ interface TopicDao {
 
     @Query("SELECT * FROM topics")
     suspend fun getAllTopics(): List<Topic>
+
+    @Query("DELETE FROM topics WHERE id = :id")
+    suspend fun deleteTopic(id: Int)
+
+//    @Query("UPDATE topics SET name = :name, description = :description WHERE id = :id")
+//    suspend fun updateTopic(id: Int, name: String, description: String)
 }
