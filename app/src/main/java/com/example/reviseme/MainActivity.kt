@@ -172,7 +172,13 @@ fun CustomTopBar(topicViewModel: TopicViewModel) {
 fun HomeContent(modifier: Modifier = Modifier, topicViewModel: TopicViewModel) {
     val topics by topicViewModel.topics.collectAsState(initial = emptyList())
 
-    if (topics.isEmpty()) {
+    // Sort topics: null `nextStudyDay` first, then by ascending `nextStudyDay`
+    val sortedTopics = topics.sortedWith(
+        compareBy<Topic> { it.nextStudyDay != null } // Null values first
+            .thenBy { it.nextStudyDay } // Then sort by ascending `nextStudyDay`
+    )
+
+    if (sortedTopics.isEmpty()) {
         Text(
             text = "No Topics Yet. Add a topic to get started.",
             modifier = modifier
@@ -181,7 +187,7 @@ fun HomeContent(modifier: Modifier = Modifier, topicViewModel: TopicViewModel) {
         )
     } else {
         LazyColumn(modifier = modifier.padding(16.dp)) {
-            items(topics) { topic ->
+            items(sortedTopics) { topic ->
                 TopicCard(topic = topic, topicViewModel = topicViewModel)
             }
         }
