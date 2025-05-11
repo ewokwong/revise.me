@@ -1,5 +1,7 @@
 package com.example.reviseme
 
+import AppDatabase
+import Topic
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,6 +27,8 @@ import androidx.compose.runtime.setValue
 import com.example.reviseme.ui.theme.RevisemeTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.OutlinedTextField
+import android.content.Context
+import androidx.room.Room
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +39,22 @@ class MainActivity : ComponentActivity() {
                 HomePage()
             }
         }
+    }
+}
+
+// Initialise the database
+object DatabaseProvider {
+    private var INSTANCE: AppDatabase? = null
+
+    fun getDatabase(context: Context): AppDatabase {
+        if (INSTANCE == null) {
+            INSTANCE = Room.databaseBuilder(
+                context.applicationContext,
+                AppDatabase::class.java,
+                "app_database"
+            ).build()
+        }
+        return INSTANCE!!
     }
 }
 
