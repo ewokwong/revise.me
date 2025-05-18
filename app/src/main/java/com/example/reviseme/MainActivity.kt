@@ -230,6 +230,8 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
+
+            // If the topic has not been studied yet, show the "Study Now" button
             if (topic.nextStudyDay == null) {
                 Button(
                     onClick = {
@@ -285,7 +287,7 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                         }.time
 
                         val diffInMillis = normalizedNextStudyDay.time - currentDate.time
-                        TimeUnit.MILLISECONDS.toDays(diffInMillis).toInt()
+                        maxOf(TimeUnit.MILLISECONDS.toDays(diffInMillis).toInt(), 0) // Clamp to 0 if in the past
                     } ?: 0
 
                     val dayText = if (daysUntil == 1) "1 day" else "$daysUntil days"
@@ -296,10 +298,11 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
     }
 
     if (showStudyDialog) {
+        val dateFormat = SimpleDateFormat("EEE, dd MMM, yyyy", Locale.getDefault())
         AlertDialog(
             onDismissRequest = { showStudyDialog = false },
             title = { Text("Congratulations!") },
-            text = { Text("Your next study day is on: ${topic.nextStudyDay ?: "TBD"}") },
+            text = { Text("Your next study day is on: ${topic.nextStudyDay?.let { dateFormat.format(it) } ?: "TBD"}") },
             confirmButton = {
                 TextButton(onClick = { showStudyDialog = false }) {
                     Text("OK")
@@ -322,13 +325,6 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     )
                     Text(topic.description)
-
-                    Text(
-                        text = "Interval",
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                    Text(if (topic.interval == 0.0f) "Not been set" else topic.interval.toString())
 
                     Text(
                         text = "Next Study Date",
