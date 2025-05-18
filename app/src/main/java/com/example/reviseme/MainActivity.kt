@@ -194,7 +194,6 @@ fun HomeContent(modifier: Modifier = Modifier, topicViewModel: TopicViewModel) {
     }
 }
 
-// Topic Card
 @Composable
 fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
     var showDialog by remember { mutableStateOf(false) }
@@ -203,6 +202,27 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
     var showStudyDialog by remember { mutableStateOf(false) }
     var editedName by remember { mutableStateOf(topic.name) }
     var editedDescription by remember { mutableStateOf(topic.description) }
+
+    // Calculate daysUntil at the start of the function
+    val daysUntil = topic.nextStudyDay?.let { nextStudyDay ->
+        val currentDate = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+
+        val normalizedNextStudyDay = Calendar.getInstance().apply {
+            time = nextStudyDay
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+
+        val diffInMillis = normalizedNextStudyDay.time - currentDate.time
+        maxOf(TimeUnit.MILLISECONDS.toDays(diffInMillis).toInt(), 0) // Clamp to 0 if in the past
+    } ?: 0
 
     androidx.compose.material3.Card(
         modifier = Modifier
@@ -231,15 +251,18 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                 )
             }
 
-            // If the topic has not been studied yet, show the "Study Now" button
-            if (topic.nextStudyDay == null) {
+            // Use daysUntil here
+            if (topic.nextStudyDay == null || daysUntil == 0) {
                 Button(
                     onClick = {
                         val currentDate = Date()
-                        val updatedStudiedOn = topic.studiedOn.toMutableList().apply { add(currentDate) }
-                        val updatedInterval = if (topic.interval == 0.0f) 1.0f else topic.interval * 1.5f
+                        val updatedStudiedOn =
+                            topic.studiedOn.toMutableList().apply { add(currentDate) }
+                        val updatedInterval =
+                            if (topic.interval == 0.0f) 1.0f else topic.interval * 1.5f
                         val roundedInterval = floor(updatedInterval.toDouble()).toInt()
-                        val updatedNextStudyDay = Date(currentDate.time + (roundedInterval * 24 * 60 * 60 * 1000).toLong())
+                        val updatedNextStudyDay =
+                            Date(currentDate.time + (roundedInterval * 24 * 60 * 60 * 1000).toLong())
 
                         val updatedTopic = topic.copy(
                             id = topic.id,
@@ -259,7 +282,6 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                     Text("Study Now")
                 }
             } else {
-                // Display the next study date
                 OutlinedButton(
                     onClick = { /* No action needed */ },
                     enabled = false,
@@ -267,29 +289,9 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                         containerColor = Color(0xFFE0E0E0), // Light Gray
                         disabledContainerColor = Color(0xFFF5F5F5) // Slightly lighter gray
                     ),
-                    border = BorderStroke(1.dp, Color.Gray), // Use BorderStroke here
+                    border = BorderStroke(1.dp, Color.Gray),
                     modifier = Modifier.padding(top = 8.dp)
                 ) {
-                    val daysUntil = topic.nextStudyDay.let { nextStudyDay ->
-                        val currentDate = Calendar.getInstance().apply {
-                            set(Calendar.HOUR_OF_DAY, 0)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }.time
-
-                        val normalizedNextStudyDay = Calendar.getInstance().apply {
-                            time = nextStudyDay
-                            set(Calendar.HOUR_OF_DAY, 0)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }.time
-
-                        val diffInMillis = normalizedNextStudyDay.time - currentDate.time
-                        maxOf(TimeUnit.MILLISECONDS.toDays(diffInMillis).toInt(), 0) // Clamp to 0 if in the past
-                    } ?: 0
-
                     val dayText = if (daysUntil == 1) "1 day" else "$daysUntil days"
                     Text("To be studied in $dayText")
                 }
