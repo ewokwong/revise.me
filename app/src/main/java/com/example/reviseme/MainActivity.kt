@@ -45,6 +45,7 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import androidx.compose.foundation.BorderStroke
+import kotlin.math.ceil
 
 
 class MainActivity : ComponentActivity() {
@@ -256,14 +257,19 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                 Button(
                     onClick = {
                         val currentDate = Date()
-                        val updatedStudiedOn =
-                            topic.studiedOn.toMutableList().apply { add(currentDate) }
-                        val updatedInterval =
-                            if (topic.interval == 0.0f) 1.0f else topic.interval * 1.5f
-                        val roundedInterval = floor(updatedInterval.toDouble()).toInt()
-                        val updatedNextStudyDay =
-                            Date(currentDate.time + (roundedInterval * 24 * 60 * 60 * 1000).toLong())
+                        val updatedStudiedOn = topic.studiedOn.toMutableList().apply { add(currentDate) }
 
+                        // Update interval
+                        val updatedInterval = if (topic.interval == 0.0f) 1.0f else topic.interval * 1.5f
+                        val roundedInterval = ceil(updatedInterval.toDouble()).toInt()
+
+                        // Calculate next study day
+                        val updatedNextStudyDay = Calendar.getInstance().apply {
+                            time = currentDate
+                            add(Calendar.DAY_OF_YEAR, roundedInterval)
+                        }.time
+
+                        // Update the topic
                         val updatedTopic = topic.copy(
                             id = topic.id,
                             name = topic.name,
@@ -334,6 +340,13 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                         modifier = Modifier.padding(top = 8.dp)
                     )
                     Text(topic.nextStudyDay?.let { dateFormat.format(it) } ?: "Not been set")
+
+//                    Text(
+//                        text = "Interval",
+//                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+//                        modifier = Modifier.padding(top = 8.dp)
+//                    )
+//                    Text("${topic.interval} days")
 
                     Text(
                         text = "Study History",
