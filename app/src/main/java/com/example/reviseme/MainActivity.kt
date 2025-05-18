@@ -49,6 +49,7 @@ import kotlin.math.ceil
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.reviseme.services.NotificationService
+import androidx.work.OneTimeWorkRequestBuilder
 
 class MainActivity : ComponentActivity() {
     // Initialise the database
@@ -57,9 +58,15 @@ class MainActivity : ComponentActivity() {
         TopicViewModelFactory(database)
     }
 
+    private fun testNotification() {
+        val workRequest = OneTimeWorkRequestBuilder<NotificationWorker>().build()
+        WorkManager.getInstance(this).enqueue(workRequest)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         NotificationService.createNotificationChannel(this)
+//        testNotification()
         scheduleDailyNotifications()
         enableEdgeToEdge()
         setContent {
