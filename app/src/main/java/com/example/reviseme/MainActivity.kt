@@ -1,6 +1,7 @@
 package com.example.reviseme
 
 import AppDatabase
+import com.example.reviseme.services.NotificationWorker
 import Topic
 import TopicViewModel
 import TopicViewModelFactory
@@ -39,14 +40,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.graphics.Color
 import java.util.Date
-import kotlin.math.floor
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import androidx.compose.foundation.BorderStroke
 import kotlin.math.ceil
-
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.reviseme.services.NotificationService
 
 class MainActivity : ComponentActivity() {
     // Initialise the database
@@ -57,12 +59,39 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NotificationService.createNotificationChannel(this)
+        scheduleDailyNotifications()
         enableEdgeToEdge()
         setContent {
             RevisemeTheme {
                 HomePage(topicViewModel)
             }
         }
+    }
+
+    private fun scheduleDailyNotifications() {
+        val currentTime = Calendar.getInstance()
+        val targetTime = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 9)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (before(currentTime)) {
+                add(Calendar.DAY_OF_YEAR, 1) // Schedule for the next day if 9 AM has passed
+            }
+        }
+
+        val initialDelay = targetTime.timeInMillis - currentTime.timeInMillis
+
+        val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(1, TimeUnit.DAYS)
+            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "DailyStudyNotifications",
+            androidx.work.ExistingPeriodicWorkPolicy.REPLACE,
+            workRequest
+        )
     }
 }
 
@@ -77,7 +106,7 @@ object DatabaseProvider {
                 AppDatabase::class.java,
                 "app_database"
             ).fallbackToDestructiveMigration()
-            .build()
+                .build()
         }
         return INSTANCE!!
     }
