@@ -3,14 +3,13 @@ package com.example.reviseme
 import AppDatabase
 import com.example.reviseme.services.NotificationWorker
 import Topic
-import TopicViewModel
+import com.example.reviseme.viewmodels.TopicViewModel
 import TopicViewModelFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -50,12 +49,18 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.reviseme.services.NotificationService
 import androidx.work.OneTimeWorkRequestBuilder
+import com.example.reviseme.viewmodels.SectionViewModel
+import com.example.reviseme.viewmodels.SectionViewModelFactory
 
 class MainActivity : ComponentActivity() {
     // Initialise the database
     private val database by lazy { DatabaseProvider.getDatabase(this) }
     private val topicViewModel: TopicViewModel by viewModels {
         TopicViewModelFactory(database)
+    }
+
+    private val sectionViewModel: SectionViewModel by viewModels {
+        SectionViewModelFactory(database)
     }
 
     private fun testNotification() {
@@ -69,9 +74,10 @@ class MainActivity : ComponentActivity() {
 //        testNotification()
         scheduleDailyNotifications()
         enableEdgeToEdge()
+
         setContent {
             RevisemeTheme {
-                HomePage(topicViewModel)
+                HomePage(topicViewModel, sectionViewModel)
             }
         }
     }
@@ -121,22 +127,35 @@ object DatabaseProvider {
 
 // Home Page
 @Composable
-fun HomePage(topicViewModel: TopicViewModel) {
+fun HomePage(topicViewModel: TopicViewModel, sectionViewModel: SectionViewModel) {
     Scaffold(
-        topBar = { CustomTopBar(topicViewModel = topicViewModel) },
+        topBar = { CustomTopBar(
+            topicViewModel = topicViewModel,
+            sectionViewModel = sectionViewModel
+        ) },
         content = { innerPadding ->
-            HomeContent(modifier = Modifier.padding(innerPadding), topicViewModel = topicViewModel)
+            HomeContent(
+                modifier = Modifier.padding(innerPadding),
+                topicViewModel = topicViewModel,
+                sectionViewModel = sectionViewModel
+            )
         }
     )
 }
 
 // Top Bar for Home Page
 @Composable
-fun CustomTopBar(topicViewModel: TopicViewModel) {
+fun CustomTopBar(
+    topicViewModel: TopicViewModel,
+    sectionViewModel: SectionViewModel
+) {
     var showDialog by remember { mutableStateOf(false) }
     var topicName by remember { mutableStateOf("") }
     var topicDescription by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
+    var showSectionDialog by remember { mutableStateOf(false) }
+    var sectionName by remember { mutableStateOf("") }
+    var showSectionError by remember { mutableStateOf(false) }
 
 
     Row(
@@ -150,7 +169,26 @@ fun CustomTopBar(topicViewModel: TopicViewModel) {
             modifier = Modifier.weight(1f),
             style = androidx.compose.material3.MaterialTheme.typography.titleLarge
         )
-        Button(onClick = { showDialog = true }) {
+        Button(
+            onClick = { showSectionDialog = true },
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1976D2) // Blue
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp)
+        ) {
+            Text("+ Add New Section")
+        }
+        Button(
+            onClick = { showDialog = true },
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF388E3C) // Green
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp)
+        ) {
             Text("+ Add New Topic")
         }
     }
@@ -196,7 +234,58 @@ fun CustomTopBar(topicViewModel: TopicViewModel) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(onClick = {
+                    showDialog = false
+                    topicName = "" // Clear the topic name field
+                    topicDescription = "" // Clear the topic description field
+                    showError = false // Reset error state
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showSectionDialog) {
+        AlertDialog(
+            onDismissRequest = { showSectionDialog = false },
+            title = { Text("Add a New Section") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = sectionName,
+                        onValueChange = { sectionName = it },
+                        label = { Text("Section Name") }
+                    )
+                    if (showSectionError) {
+                        Text(
+                            text = "A Section Name is required.",
+                            color = androidx.compose.ui.graphics.Color.Red,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (sectionName.isBlank()) {
+                        showSectionError = true
+                    } else {
+                        sectionViewModel.addSection(sectionName)
+                        sectionName = ""
+                        showSectionError = false
+                        showSectionDialog = false
+                    }
+                }) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showSectionDialog = false
+                    sectionName = ""
+                    showSectionError = false
+                }) {
                     Text("Cancel")
                 }
             }
@@ -206,33 +295,61 @@ fun CustomTopBar(topicViewModel: TopicViewModel) {
 
 // Main content for Home Page
 @Composable
-fun HomeContent(modifier: Modifier = Modifier, topicViewModel: TopicViewModel) {
+fun HomeContent(
+    modifier: Modifier = Modifier,
+    topicViewModel: TopicViewModel,
+    sectionViewModel: SectionViewModel
+) {
     val topics by topicViewModel.topics.collectAsState(initial = emptyList())
+    val sections by sectionViewModel.sections.collectAsState(initial = emptyList())
 
-    // Sort topics: null `nextStudyDay` first, then by ascending `nextStudyDay`
-    val sortedTopics = topics.sortedWith(
-        compareBy<Topic> { it.nextStudyDay != null } // Null values first
-            .thenBy { it.nextStudyDay } // Then sort by ascending `nextStudyDay`
-    )
-
-    if (sortedTopics.isEmpty()) {
-        Text(
-            text = "No Topics Yet. Add a topic to get started.",
-            modifier = modifier
-                .fillMaxSize()
-                .padding(top = 32.dp, start = 16.dp, end = 16.dp)
-        )
-    } else {
-        LazyColumn(modifier = modifier.padding(16.dp)) {
-            items(sortedTopics) { topic ->
-                TopicCard(topic = topic, topicViewModel = topicViewModel)
+    LazyColumn(modifier = modifier.padding(16.dp)) {
+        // Sort sections alphabetically by name
+        sections.sortedBy { it.name }.forEach { section ->
+            item {
+                Text(
+                    text = section.name,
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
+            val sectionTopics = topics.filter { it.sectionId == section.id }
+            if (sectionTopics.isEmpty()) {
+                item {
+                    Text(
+                        text = "No topics",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+            } else {
+                items(sectionTopics) { topic ->
+                    TopicCard(topic = topic, sectionName = section.name, topicViewModel = topicViewModel)
+                }
+            }
+        }
+
+        // Handle unassigned topics
+        item {
+            Text(
+                text = "Unassigned",
+                style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+        items(topics.filter { it.sectionId == null }) { topic ->
+            TopicCard(topic = topic, sectionName = "Unassigned", topicViewModel = topicViewModel)
         }
     }
 }
 
 @Composable
-fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
+fun TopicCard(
+    topic: Topic,
+    sectionName: String,
+    topicViewModel: TopicViewModel
+) {
     var showDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -396,6 +513,12 @@ fun TopicCard(topic: Topic, topicViewModel: TopicViewModel) {
                             Text("• ${dateFormat.format(date)}")
                         }
                     }
+                    Text(
+                        text = "Section",
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Text(sectionName)
                 }
             },
             confirmButton = {

@@ -1,3 +1,7 @@
+package com.example.reviseme.viewmodels
+
+import AppDatabase
+import Topic
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,5 +60,10 @@ class TopicViewModel(private val database: AppDatabase) : ViewModel() {
         viewModelScope.launch {
             _topics.value = database.topicDao().getAllTopics()
         }
+    }
+
+    // Function to get unassigned topics
+    fun getUnassignedTopics(): List<Topic> {
+        return _topics.value.filter { it.sectionId == null }
     }
 }

@@ -11,5 +11,6 @@ data class Topic(
     val description: String,
     val interval: Float = 0.0f,
     val studiedOn: List<Date> = emptyList(),
-    val nextStudyDay: Date? = null
+    val nextStudyDay: Date? = null,
+    val sectionId: Int? = null // Foreign key to Section
 )

@@ -37,4 +37,8 @@ interface TopicDao {
         interval: Float,
         nextStudyDay: Date?
     )
+
+    // Query to get topics that are not assigned to any section
+    @Query("SELECT * FROM topics WHERE sectionId IS NULL")
+    fun getUnassignedTopics(): List<Topic>
 }
