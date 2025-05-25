@@ -10,18 +10,27 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.reviseme"
+        applicationId = "com.ethan.revise_me" // Update the package name
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-
+        versionCode = 2 // Increment the version code
+        versionName = "1.1" // Update the version name
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("my-new-release-key.jks")
+            storePassword = "g9wuu^CCQuK483as"
+            keyAlias = "newKeyAlias"
+            keyPassword = "g9wuu^CCQuK483as"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
