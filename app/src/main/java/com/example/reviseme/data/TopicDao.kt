@@ -16,8 +16,8 @@ interface TopicDao {
     @Query("DELETE FROM topics WHERE id = :id")
     suspend fun deleteTopic(id: Int)
 
-    @Query("UPDATE topics SET name = :name, description = :description WHERE id = :id")
-    suspend fun updateTopic(id: Int, name: String, description: String)
+    @Query("UPDATE topics SET name = :name, description = :description, sectionId = :sectionId WHERE id = :id")
+    suspend fun updateTopic(id: Int, name: String, description: String, sectionId: Int?)
 
     // Query to iterate topic after studied
     @Query("""

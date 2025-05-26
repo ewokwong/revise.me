@@ -18,10 +18,11 @@ class TopicViewModel(private val database: AppDatabase) : ViewModel() {
     }
 
     // Function to add topic
-    fun addTopic(name: String, description: String) {
+    fun addTopic(name: String, description: String, sectionId: String? = null) {
         viewModelScope.launch {
-            database.topicDao().insertTopic(Topic(name = name, description = description))
-            fetchTopics() // Refresh the list after adding a topic
+            val sectionIdInt = sectionId?.toIntOrNull() // Convert String? to Int?
+            database.topicDao().insertTopic(Topic(name = name, description = description, sectionId = sectionIdInt))
+            fetchTopics()
         }
     }
 
@@ -36,7 +37,12 @@ class TopicViewModel(private val database: AppDatabase) : ViewModel() {
     // Function to update topic
     fun updateTopic(topic: Topic) {
         viewModelScope.launch {
-            database.topicDao().updateTopic(topic.id, topic.name, topic.description)
+            database.topicDao().updateTopic(
+                topic.id,
+                topic.name,
+                topic.description,
+                topic.sectionId
+            )
             fetchTopics()
         }
     }
